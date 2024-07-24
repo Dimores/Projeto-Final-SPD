@@ -1,0 +1,5 @@
+**Servidor**
+	1 - pyro4-ns -n 192.168.0.5 -p 9090
+	2 - python server.py
+**Cliente**
+	1 - python client.py
