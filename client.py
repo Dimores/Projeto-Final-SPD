@@ -4,6 +4,7 @@ import pickle
 import threading
 import numpy as np
 import zlib
+import ssl
 
 # Configuração do cliente
 HOST = '192.168.0.5'  # IP do servidor (verifique se este é o IP correto)
@@ -11,9 +12,13 @@ PORT = 9090
 
 # Inicializa o Pygame
 pygame.init()
+pygame.joystick.init()
 
-# Conecta ao servidor
+# Conecta ao servidor com SSL
+context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client = context.wrap_socket(client, server_hostname=HOST)
+
 try:
     client.connect((HOST, PORT))
 except Exception as e:
@@ -30,10 +35,6 @@ clock = pygame.time.Clock()
 # Variável global para a imagem recebida
 received_frame = None
 frame_lock = threading.Lock()
-
-# Função para enviar comandos ao servidor
-def send_command(command):
-    client.sendall(command.encode())
 
 # Função para receber a tela do servidor em uma thread separada
 def receive_screen():
@@ -58,9 +59,30 @@ def receive_screen():
             print(f"Erro ao receber dados: {e}")
             break
 
+# Função para enviar comandos de joystick ao servidor
+def send_joystick_commands():
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                client.close()
+                return
+            if event.type == pygame.JOYAXISMOTION or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
+                joystick_data = {
+                    "type": event.type,
+                    "axis": event.axis if event.type == pygame.JOYAXISMOTION else None,
+                    "value": event.value if event.type == pygame.JOYAXISMOTION else None,
+                    "button": event.button if event.type in [pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP] else None
+                }
+                client.sendall(pickle.dumps(joystick_data))
+
 # Inicia a thread de recebimento de tela
 receive_thread = threading.Thread(target=receive_screen, daemon=True)
 receive_thread.start()
+
+# Inicia a thread de envio de comandos de joystick
+joystick_thread = threading.Thread(target=send_joystick_commands, daemon=True)
+joystick_thread.start()
 
 # Loop principal do Pygame
 running = True
@@ -68,26 +90,6 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_w:
-                send_command('W')
-            elif event.key == pygame.K_a:
-                send_command('A')
-            elif event.key == pygame.K_s:
-                send_command('S')
-            elif event.key == pygame.K_d:
-                send_command('D')
-            elif event.key == pygame.K_SPACE:
-                send_command('SPACE')
-            elif event.key == pygame.K_r:
-                send_command('R')
-            elif event.key == pygame.K_q:
-                send_command('Q')
-            elif event.key == pygame.K_e:
-                send_command('E')
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Clique esquerdo do mouse
-                send_command('CLICK')
 
     # Atualiza a tela com a imagem recebida
     with frame_lock:
