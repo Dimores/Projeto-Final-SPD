@@ -69,14 +69,25 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                send_command('LEFT')
-            elif event.key == pygame.K_RIGHT:
-                send_command('RIGHT')
-            elif event.key == pygame.K_UP:
-                send_command('UP')
-            elif event.key == pygame.K_DOWN:
-                send_command('DOWN')
+            if event.key == pygame.K_w:
+                send_command('W')
+            elif event.key == pygame.K_a:
+                send_command('A')
+            elif event.key == pygame.K_s:
+                send_command('S')
+            elif event.key == pygame.K_d:
+                send_command('D')
+            elif event.key == pygame.K_SPACE:
+                send_command('SPACE')
+            elif event.key == pygame.K_r:
+                send_command('R')
+            elif event.key == pygame.K_q:
+                send_command('Q')
+            elif event.key == pygame.K_e:
+                send_command('E')
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Clique esquerdo do mouse
+                send_command('CLICK')
 
     # Atualiza a tela com a imagem recebida
     with frame_lock:
