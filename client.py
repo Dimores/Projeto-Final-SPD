@@ -1,108 +1,97 @@
 import socket
-import pygame
 import pickle
-import threading
-import numpy as np
 import zlib
-import ssl
+import pygame
+import sys
+import threading
+import cv2  # Adicionar OpenCV para manipulação da imagem
 
 # Configuração do cliente
-HOST = '192.168.0.5'  # IP do servidor (verifique se este é o IP correto)
+HOST = '192.168.0.12'
 PORT = 9090
+
 
 # Inicializa o Pygame
 pygame.init()
-pygame.joystick.init()
 
-# Conecta ao servidor com SSL
-context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client = context.wrap_socket(client, server_hostname=HOST)
+# Função para receber e exibir a tela
+def receive_and_display_screen(conn):
+    resolution_data = conn.recv(1024)
+    resolution = pickle.loads(resolution_data)
+    screen = pygame.display.set_mode(resolution)
+    pygame.display.set_caption("Client")
 
-try:
-    client.connect((HOST, PORT))
-except Exception as e:
-    print(f"Erro ao conectar ao servidor: {e}")
-    exit()
-
-# Recebe a resolução do servidor
-resolution_data = client.recv(1024)
-resolution = pickle.loads(resolution_data)
-screen = pygame.display.set_mode(resolution)
-pygame.display.set_caption("Cliente de Controle")
-clock = pygame.time.Clock()
-
-# Variável global para a imagem recebida
-received_frame = None
-frame_lock = threading.Lock()
-
-# Função para receber a tela do servidor em uma thread separada
-def receive_screen():
-    global received_frame
-    while True:
-        try:
-            # Recebe o tamanho dos dados primeiro
-            data_size = int.from_bytes(client.recv(4), 'big')
-            data = b""
-            while len(data) < data_size:
-                packet = client.recv(min(data_size - len(data), 4096))
+    try:
+        while True:
+            # Recebe o comprimento dos dados
+            data_length_bytes = conn.recv(4)
+            if not data_length_bytes:
+                break
+            data_length = int.from_bytes(data_length_bytes, 'big')
+            
+            # Recebe os dados da tela comprimidos
+            compressed_data = b''
+            while len(compressed_data) < data_length:
+                packet = conn.recv(data_length - len(compressed_data))
                 if not packet:
-                    return
-                data += packet
-            if len(data) == data_size:
-                decompressed_data = zlib.decompress(data)
-                frame = pickle.loads(decompressed_data)
-                if isinstance(frame, np.ndarray):
-                    with frame_lock:
-                        received_frame = frame
-        except Exception as e:
-            print(f"Erro ao receber dados: {e}")
-            break
+                    break
+                compressed_data += packet
 
-# Função para enviar comandos de joystick ao servidor
-def send_joystick_commands():
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                client.close()
-                return
-            if event.type == pygame.JOYAXISMOTION or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
-                joystick_data = {
-                    "type": event.type,
-                    "axis": event.axis if event.type == pygame.JOYAXISMOTION else None,
-                    "value": event.value if event.type == pygame.JOYAXISMOTION else None,
-                    "button": event.button if event.type in [pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP] else None
-                }
-                client.sendall(pickle.dumps(joystick_data))
+            # Descomprime os dados
+            data = zlib.decompress(compressed_data)
+            img_array = pickle.loads(data)
 
-# Inicia a thread de recebimento de tela
-receive_thread = threading.Thread(target=receive_screen, daemon=True)
+            # Rotaciona a imagem
+            img_array = cv2.rotate(img_array, cv2.ROTATE_90_CLOCKWISE)
+
+            # Converte o array para uma superfície do Pygame
+            img_surface = pygame.surfarray.make_surface(img_array)
+
+            # Exibe a tela
+            screen.blit(img_surface, (0, 0))
+            pygame.display.update()
+    except Exception as e:
+        print(f"Erro ao receber e exibir a tela: {e}")
+    finally:
+        conn.close()
+
+# Função para enviar comandos do joystick
+def send_joystick_commands(conn):
+    joystick = pygame.joystick.Joystick(0)
+    joystick.init()
+    try:
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.JOYAXISMOTION or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
+                    joystick_data = {
+                        "type": event.type,
+                        "axis": event.axis if event.type == pygame.JOYAXISMOTION else None,
+                        "value": event.value if event.type == pygame.JOYAXISMOTION else None,
+                        "button": event.button if event.type in [pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP] else None,
+                    }
+                    data = pickle.dumps(joystick_data)
+                    data_length = len(data)
+                    conn.sendall(data_length.to_bytes(4, 'big') + data)
+                    # Comentar o log dos comandos do joystick
+                    # print(f"Enviado comando do joystick: {joystick_data}")
+    except Exception as e:
+        print(f"Erro ao enviar comando do joystick: {e}")
+    finally:
+        conn.close()
+
+# Conecta ao servidor
+conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+conn.connect((HOST, PORT))
+
+# Inicia as threads para receber a tela e enviar comandos do joystick
+receive_thread = threading.Thread(target=receive_and_display_screen, args=(conn,))
+send_thread = threading.Thread(target=send_joystick_commands, args=(conn,))
+
 receive_thread.start()
+send_thread.start()
 
-# Inicia a thread de envio de comandos de joystick
-joystick_thread = threading.Thread(target=send_joystick_commands, daemon=True)
-joystick_thread.start()
+receive_thread.join()
+send_thread.join()
 
-# Loop principal do Pygame
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    # Atualiza a tela com a imagem recebida
-    with frame_lock:
-        if received_frame is not None:
-            try:
-                frame = pygame.surfarray.make_surface(received_frame.swapaxes(0, 1))
-                screen.blit(frame, (0, 0))
-                pygame.display.flip()
-            except Exception as e:
-                print(f"Erro ao atualizar a tela: {e}")
-
-    clock.tick(60)
-
-# Fecha a conexão e o Pygame
-client.close()
 pygame.quit()
+sys.exit()

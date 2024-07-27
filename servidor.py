@@ -5,13 +5,19 @@ import mss
 import numpy as np
 import zlib
 import cv2
-import ssl
-import pyautogui
+import vgamepad
+import pygame
 
 # Configuração do servidor
 HOST = '0.0.0.0'
 PORT = 9090
 REDUCE_SCALE = 0.4
+
+# Inicializa o Pygame (necessário para usar constantes como JOYAXISMOTION)
+pygame.init()
+
+# Inicializa o vgamepad
+gamepad = vgamepad.VX360Gamepad()
 
 # Função para capturar a tela e enviar ao cliente
 def capture_and_send_screen(conn):
@@ -44,27 +50,56 @@ def handle_client(conn):
     threading.Thread(target=capture_and_send_screen, args=(conn,)).start()
     while True:
         try:
-            data = conn.recv(1024)
-            if not data:
+            data_length_bytes = conn.recv(4)
+            if not data_length_bytes:
                 break
+            data_length = int.from_bytes(data_length_bytes, 'big')
+            data = b''
+            while len(data) < data_length:
+                packet = conn.recv(data_length - len(data))
+                if not packet:
+                    break
+                data += packet
             joystick_data = pickle.loads(data)
-            if joystick_data["type"] == pygame.JOYAXISMOTION:
-                axis = joystick_data["axis"]
-                value = joystick_data["value"]
-                # Adicione a lógica para manipular os dados do eixo do joystick aqui
-            elif joystick_data["type"] in [pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP]:
-                button = joystick_data["button"]
-                # Adicione a lógica para manipular os dados dos botões do joystick aqui
+            process_joystick_data(joystick_data)
         except Exception as e:
             print(f"Erro ao receber comando: {e}")
             break
 
-# Inicia o servidor com SSL
-context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-context.load_cert_chain(certfile='server.crt', keyfile='server.key')
+# Função para processar dados do joystick
+def process_joystick_data(joystick_data):
+    if joystick_data["type"] == pygame.JOYAXISMOTION:
+        axis = joystick_data["axis"]
+        value = joystick_data["value"]
+        # Comentar os logs dos comandos do joystick
+        # print(f"Recebido comando do joystick: EIXO - Axis: {axis}, Value: {value}")
+        # Lógica para manipular os dados do eixo do joystick
+        if axis == 0:  # Eixo X
+            gamepad.left_joystick_float(x_value_float=value, y_value_float=0)
+        elif axis == 1:  # Eixo Y
+            gamepad.left_joystick_float(x_value_float=0, y_value_float=value)
+    elif joystick_data["type"] == pygame.JOYBUTTONDOWN:
+        button = joystick_data["button"]
+        # Comentar os logs dos comandos do joystick
+        # print(f"Recebido comando do joystick: BOTÃO PRESSIONADO - Button: {button}")
+        # Lógica para manipular os dados dos botões do joystick
+        if button == 0:  # Botão A
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+        elif button == 1:  # Botão B
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_B)
+        gamepad.update()
+    elif joystick_data["type"] == pygame.JOYBUTTONUP:
+        button = joystick_data["button"]
+        # Comentar os logs dos comandos do joystick
+        # print(f"Recebido comando do joystick: BOTÃO SOLTO - Button: {button}")
+        if button == 0:  # Botão A
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+        elif button == 1:  # Botão B
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_B)
+        gamepad.update()
 
+# Inicia o servidor
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server = context.wrap_socket(server, server_side=True)
 server.bind((HOST, PORT))
 server.listen()
 
