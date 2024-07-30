@@ -7,7 +7,7 @@ import threading
 import cv2  # Adicionar OpenCV para manipulação da imagem
 
 # Configuração do cliente
-HOST = '192.168.0.12'
+HOST = '192.168.0.5'
 PORT = 9090
 
 

@@ -72,7 +72,7 @@ def process_joystick_data(joystick_data):
         axis = joystick_data["axis"]
         value = joystick_data["value"]
         # Comentar os logs dos comandos do joystick
-        # print(f"Recebido comando do joystick: EIXO - Axis: {axis}, Value: {value}")
+        print(f"Recebido comando do joystick: EIXO - Axis: {axis}, Value: {value}")
         # Lógica para manipular os dados do eixo do joystick
         if axis == 0:  # Eixo X
             gamepad.left_joystick_float(x_value_float=value, y_value_float=0)
@@ -81,7 +81,7 @@ def process_joystick_data(joystick_data):
     elif joystick_data["type"] == pygame.JOYBUTTONDOWN:
         button = joystick_data["button"]
         # Comentar os logs dos comandos do joystick
-        # print(f"Recebido comando do joystick: BOTÃO PRESSIONADO - Button: {button}")
+        print(f"Recebido comando do joystick: BOTÃO PRESSIONADO - Button: {button}")
         # Lógica para manipular os dados dos botões do joystick
         if button == 0:  # Botão A
             gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
