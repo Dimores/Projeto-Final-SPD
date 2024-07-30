@@ -6,10 +6,10 @@ import sys
 import threading
 import cv2  # Adicionar OpenCV para manipulação da imagem
 
-# Configuração do cliente
-HOST = '192.168.0.5'
+# Configurações do cliente
+HOST = '172.25.3.99'
 PORT = 9090
-
+DEAD_ZONE = 0.05  # Define a "dead zone" para os analógicos
 
 # Inicializa o Pygame
 pygame.init()
@@ -62,12 +62,25 @@ def send_joystick_commands(conn):
     try:
         while True:
             for event in pygame.event.get():
-                if event.type == pygame.JOYAXISMOTION or event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
+                if event.type == pygame.JOYAXISMOTION:
+                    axis = event.axis
+                    value = event.value
+                    if abs(value) < DEAD_ZONE:  # Verifica se o valor está dentro da "dead zone"
+                        value = 0.0
                     joystick_data = {
                         "type": event.type,
-                        "axis": event.axis if event.type == pygame.JOYAXISMOTION else None,
-                        "value": event.value if event.type == pygame.JOYAXISMOTION else None,
-                        "button": event.button if event.type in [pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP] else None,
+                        "axis": axis,
+                        "value": value,
+                    }
+                    data = pickle.dumps(joystick_data)
+                    data_length = len(data)
+                    conn.sendall(data_length.to_bytes(4, 'big') + data)
+                    # Comentar o log dos comandos do joystick
+                    # print(f"Enviado comando do joystick: {joystick_data}")
+                elif event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
+                    joystick_data = {
+                        "type": event.type,
+                        "button": event.button,
                     }
                     data = pickle.dumps(joystick_data)
                     data_length = len(data)

@@ -72,21 +72,46 @@ def process_joystick_data(joystick_data):
         axis = joystick_data["axis"]
         value = joystick_data["value"]
         # Comentar os logs dos comandos do joystick
-        print(f"Recebido comando do joystick: EIXO - Axis: {axis}, Value: {value}")
+        # print(f"Recebido comando do joystick: EIXO - Axis: {axis}, Value: {value}")
         # Lógica para manipular os dados do eixo do joystick
-        if axis == 0:  # Eixo X
+        if axis == 0:  # Eixo X do analógico esquerdo
             gamepad.left_joystick_float(x_value_float=value, y_value_float=0)
-        elif axis == 1:  # Eixo Y
+        elif axis == 1:  # Eixo Y do analógico esquerdo
             gamepad.left_joystick_float(x_value_float=0, y_value_float=value)
+        elif axis == 2:  # Trigger esquerdo
+            gamepad.left_trigger(value)
+        elif axis == 3:  # Eixo X do analógico direito
+            gamepad.right_joystick_float(x_value_float=value, y_value_float=0)
+        elif axis == 4:  # Eixo Y do analógico direito
+            gamepad.right_joystick_float(x_value_float=0, y_value_float=value)
+        elif axis == 5:  # Trigger direito
+            gamepad.right_trigger(value)
+        gamepad.update()
     elif joystick_data["type"] == pygame.JOYBUTTONDOWN:
         button = joystick_data["button"]
         # Comentar os logs dos comandos do joystick
-        print(f"Recebido comando do joystick: BOTÃO PRESSIONADO - Button: {button}")
+        # print(f"Recebido comando do joystick: BOTÃO PRESSIONADO - Button: {button}")
         # Lógica para manipular os dados dos botões do joystick
         if button == 0:  # Botão A
             gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
         elif button == 1:  # Botão B
             gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_B)
+        elif button == 2:  # Botão X
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_X)
+        elif button == 3:  # Botão Y
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_Y)
+        elif button == 4:  # Botão LB
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER)
+        elif button == 5:  # Botão RB
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
+        elif button == 6:  # Botão Back
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_BACK)
+        elif button == 7:  # Botão Start
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_START)
+        elif button == 8:  # Analógico esquerdo (click)
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_THUMB)
+        elif button == 9:  # Analógico direito (click)
+            gamepad.press_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_THUMB)
         gamepad.update()
     elif joystick_data["type"] == pygame.JOYBUTTONUP:
         button = joystick_data["button"]
@@ -96,6 +121,22 @@ def process_joystick_data(joystick_data):
             gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
         elif button == 1:  # Botão B
             gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_B)
+        elif button == 2:  # Botão X
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_X)
+        elif button == 3:  # Botão Y
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_Y)
+        elif button == 4:  # Botão LB
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER)
+        elif button == 5:  # Botão RB
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
+        elif button == 6:  # Botão Back
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_BACK)
+        elif button == 7:  # Botão Start
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_START)
+        elif button == 8:  # Analógico esquerdo (click)
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_THUMB)
+        elif button == 9:  # Analógico direito (click)
+            gamepad.release_button(button=vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_THUMB)
         gamepad.update()
 
 # Inicia o servidor
